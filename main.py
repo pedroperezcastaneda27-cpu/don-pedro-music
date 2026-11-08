@@ -211,8 +211,8 @@ async def buscar_canciones(request):
         'format': 'bestaudio/best',
         'noplaylist': True,
         'default_search': 'ytsearch30',
-        'socket_timeout': 10,
-        'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
+        'socket_timeout': 15,
+        'extractor_args': {'youtube': {'player_client': ['tv', 'web']}},
         'match_filter': yt_dlp.utils.match_filter_func("duration < 720"),
     }
 
@@ -260,7 +260,7 @@ async def descargar_audio(request):
             'preferredcodec': 'mp3',
             'preferredquality': '192',
         }],
-        'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
+        'extractor_args': {'youtube': {'player_client': ['tv', 'web']}},
         'match_filter': yt_dlp.utils.match_filter_func("duration < 720"),
     }
 
