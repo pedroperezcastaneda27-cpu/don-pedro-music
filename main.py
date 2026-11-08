@@ -15,23 +15,23 @@ HTML_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Don Pedro Music - Buscador y Reproductor</title>
+    <title>Don Pedro Music - Definitiva</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#1db954">
 </head>
 <body style="background: #121212; color: #ffffff; font-family: Arial; padding: 15px; max-width: 600px; margin: 0 auto;">
     <h2 style="color: #1db954; text-align: center; margin-bottom: 5px;">🎵 Don Pedro Music 🎵</h2>
-    <p style="text-align: center; color: #888; font-size: 12px; margin-top: 0;">Buscador y Descargador al Centavazo</p>
+    <p style="text-align: center; color: #888; font-size: 12px; margin-top: 0;">Modo Venganza - Cero Bloqueos</p>
 
     <!-- ANUNCIO SUPERIOR -->
     <div style="background: #1e1e1e; border: 1px dashed #444; padding: 10px; text-align: center; margin-bottom: 15px; border-radius: 8px; color: #666;">
         [ Espacio para tu Anuncio / Banner Superior ]
     </div>
 
-    <!-- PANEL DE BÚSQUEDA RÁPIDA -->
+    <!-- BUSCADOR DIRECTO DESDE EL CLIENTE -->
     <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-        <input type="text" id="query" placeholder="Busca artista, cumbia o corrido..." onkeydown="if(event.key === 'Enter') buscar()" style="flex: 1; padding: 14px; background: #222; color: #fff; border: 1px solid #444; border-radius: 8px; font-size: 16px; outline: none;">
-        <button onclick="buscar()" style="padding: 14px 20px; background: #1db954; color: #fff; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer;">Buscar</button>
+        <input type="text" id="query" placeholder="Busca artista, cumbia o corrido..." onkeydown="if(event.key === 'Enter') buscarClient()" style="flex: 1; padding: 14px; background: #222; color: #fff; border: 1px solid #444; border-radius: 8px; font-size: 16px; outline: none;">
+        <button onclick="buscarClient()" style="padding: 14px 20px; background: #1db954; color: #fff; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer;">Buscar</button>
     </div>
 
     <!-- ECUALIZADOR DE BAJOS -->
@@ -45,7 +45,7 @@ HTML_TEMPLATE = """
     </div>
 
     <div id="status" style="text-align: center; color: #ffeb3b; font-weight: bold; margin-bottom: 15px; font-size: 14px;"></div>
-    <div id="loading" style="text-align: center; color: #1db954; display: none; margin: 20px; font-weight: bold;">⚡ Buscando repertorio...</div>
+    <div id="loading" style="text-align: center; color: #1db954; display: none; margin: 20px; font-weight: bold;">⚡ Buscando canciones...</div>
     <div id="results"></div>
 
     <!-- ANUNCIO INFERIOR -->
@@ -88,7 +88,7 @@ HTML_TEMPLATE = """
             }
         }
 
-        async function buscar() {
+        async function buscarClient() {
             const q = document.getElementById('query').value;
             if (!q) return;
             document.getElementById('loading').style.display = 'block';
@@ -96,23 +96,29 @@ HTML_TEMPLATE = """
             document.getElementById('status').innerText = '';
 
             try {
-                let res = await fetch('/buscar?q=' + encodeURIComponent(q));
-                let data = await res.json();
+                // Consultamos una API pública de Invidious directamente desde el navegador del usuario para evitar bloqueo de IP de Render
+                let response = await fetch(`https://vid.priv.au/api/v1/search?q=${encodeURIComponent(q)}&type=video`);
+                let data = await response.json();
                 document.getElementById('loading').style.display = 'none';
 
-                if (data.resultados && data.resultados.length > 0) {
+                if (data && data.length > 0) {
                     let html = '';
-                    data.resultados.forEach(item => {
-                        let tituloLimpio = item.titulo.replace(/'/g, "").replace(/"/g, "");
+                    data.slice(0, 15).forEach(item => {
+                        let videoId = item.videoId;
+                        let titulo = item.title.replace(/'/g, "").replace(/"/g, "");
+                        let canal = item.author;
+                        let miniatura = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+                        let streamUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
                         html += `
                             <div style="background: #1e1e1e; padding: 10px; margin-bottom: 12px; border-radius: 8px; border: 1px solid #333; display: flex; gap: 10px; align-items: center;">
-                                <img src="${item.miniatura}" style="width: 75px; height: 55px; object-fit: cover; border-radius: 6px; background: #222;">
+                                <img src="${miniatura}" style="width: 75px; height: 55px; object-fit: cover; border-radius: 6px; background: #222;">
                                 <div style="flex: 1; overflow: hidden;">
-                                    <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.titulo}</h4>
-                                    <p style="margin: 0 0 6px 0; font-size: 11px; color: #aaa;">${item.canal}</p>
+                                    <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${titulo}</h4>
+                                    <p style="margin: 0 0 6px 0; font-size: 11px; color: #aaa;">${canal}</p>
                                     <div style="display: flex; align-items: center; gap: 8px;">
-                                        <audio controls onplay="initAudioContext(this)" style="flex: 1; height: 32px;" src="${item.stream_url}"></audio>
-                                        <button onclick="descargar('${item.id}', '${tituloLimpio}', this)" style="background: #282828; color: #1db954; border: 1px solid #1db954; padding: 6px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px;">📥 SD</button>
+                                        <a href="https://www.youtube.com/watch?v=${videoId}" target="_blank" style="background: #333; color: #1db954; padding: 6px 10px; border-radius: 6px; text-decoration: none; font-size: 11px; font-weight: bold;">▶️ Ver</a>
+                                        <button onclick="descargar('${videoId}', '${titulo}', this)" style="background: #282828; color: #1db954; border: 1px solid #1db954; padding: 6px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px;">📥 SD</button>
                                     </div>
                                 </div>
                             </div>
@@ -124,7 +130,7 @@ HTML_TEMPLATE = """
                 }
             } catch (e) {
                 document.getElementById('loading').style.display = 'none';
-                document.getElementById('status').innerText = 'Error al buscar.';
+                document.getElementById('status').innerText = 'Error al buscar en los servidores públicos.';
             }
         }
 
@@ -140,12 +146,12 @@ HTML_TEMPLATE = """
                     btn.innerText = "✅ ¡Listo!";
                     btn.style.background = "#1db954";
                     btn.style.color = "#fff";
-                    document.getElementById('status').innerText = "¡Descarga lista en tu dispositivo!";
+                    document.getElementById('status').innerText = "¡Descarga lista al centavazo!";
                     window.location.href = data.download_url;
                 } else {
                     btn.innerText = "📥 SD";
                     btn.disabled = false;
-                    document.getElementById('status').innerText = data.error || "Error al descargar.";
+                    document.getElementById('status').innerText = data.error || "Error en la descarga.";
                 }
             } catch (e) {
                 btn.innerText = "📥 SD";
@@ -176,57 +182,11 @@ async def manifest(request):
         }]
     })
 
-async def buscar_canciones(request):
-    q = request.query_params.get("q", "")
-    if not q:
-        return JSONResponse({"error": "Vacío"}, status_code=400)
-
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'noplaylist': True,
-        'default_search': 'ytsearch15',
-        'socket_timeout': 20,
-        # Usamos cliente ios y webembedded para evitar el pinche bloqueo de bot en datacenters
-        'extractor_args': {'youtube': {'player_client': ['ios', 'web_embedded']}},
-        'match_filter': yt_dlp.utils.match_filter_func("duration < 720"),
-    }
-
-    loop = asyncio.get_event_loop()
-    def _buscar():
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            return ydl.extract_info(f"ytsearch15:{q}", download=False)
-
-    try:
-        info = await loop.run_in_executor(None, _buscar)
-        resultados = []
-        titulos_vistos = set()
-
-        for entry in info.get('entries', []):
-            if entry and entry.get('url'):
-                titulo_original = entry.get('title', '')
-                titulo_normalizado = "".join(c.lower() for c in titulo_original if c.isalnum())
-
-                if titulo_normalizado not in titulos_vistos:
-                    titulos_vistos.add(titulo_normalizado)
-                    video_id = entry.get('id')
-                    thumbnail_url = entry.get('thumbnail') or f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
-
-                    resultados.append({
-                        'id': video_id,
-                        'titulo': titulo_original,
-                        'canal': entry.get('uploader'),
-                        'stream_url': entry.get('url'),
-                        'miniatura': thumbnail_url
-                    })
-
-        return JSONResponse({"status": "ok", "resultados": resultados[:15]})
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
-
 async def descargar_audio(request):
     video_id = request.path_params['video_id']
     url = f"https://www.youtube.com/watch?v={video_id}"
 
+    # El servidor solo procesa la descarga individual cuando tú le pides el MP3, usando cliente android optimizado
     ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s.%(ext)s'),
@@ -235,7 +195,7 @@ async def descargar_audio(request):
             'preferredcodec': 'mp3',
             'preferredquality': '192',
         }],
-        'extractor_args': {'youtube': {'player_client': ['ios', 'web_embedded']}},
+        'extractor_args': {'youtube': {'player_client': ['android']}},
     }
 
     loop = asyncio.get_event_loop()
@@ -260,7 +220,6 @@ async def descargar_audio(request):
 routes = [
     Route("/", home),
     Route("/manifest.json", manifest),
-    Route("/buscar", buscar_canciones),
     Route("/descargar_mp3/{video_id}", descargar_audio),
     Mount("/archivo", StaticFiles(directory=DOWNLOAD_DIR), name="archivo"),
 ]
