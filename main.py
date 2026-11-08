@@ -1,5 +1,7 @@
 import os
 import asyncio
+import urllib.request
+import json
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse, HTMLResponse
 from starlette.routing import Route, Mount
@@ -207,44 +209,69 @@ async def buscar_canciones(request):
     if not q:
         return JSONResponse({"error": "Vacío"}, status_code=400)
 
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'noplaylist': True,
-        'default_search': 'ytsearch20',
-        'socket_timeout': 20,
-        'extractor_args': {'youtube': {'player_client': ['android']}},
-        'match_filter': yt_dlp.utils.match_filter_func("duration < 720"),
-    }
+    # Lista de espejos públicos de Invidious altamente confiables para evitar bloqueo de IP en Render
+    invidious_instances = [
+        "https://inv.nadeko.net",
+        "https://invidious.privacyredirect.com",
+        "https://vid.priv.au",
+        "https://invidious.nerdvpn.de"
+    ]
 
+    data = None
     loop = asyncio.get_event_loop()
-    def _buscar():
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            return ydl.extract_info(f"ytsearch20:{q}", download=False)
+
+    for instance in invidious_instances:
+        try:
+            url = f"{instance}/api/v1/search?q={urllib.parse.quote(q)}&type=video"
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
+            
+            def _fetch(r):
+                with urllib.request.urlopen(r, timeout=6) as response:
+                    return json.loads(response.read().decode())
+
+            data = await loop.run_in_executor(None, _fetch, req)
+            if data:
+                break
+        except Exception:
+            continue
+
+    if not data:
+        return JSONResponse({"error": "No se pudo conectar a los espejos de búsqueda. Intenta de nuevo."}, status_code=500)
 
     try:
-        info = await loop.run_in_executor(None, _buscar)
         resultados = []
-        titulos_vistos = set()
+        for item in data[:15]:
+            video_id = item.get('videoId')
+            titulo = item.get('title')
+            canal = item.get('author')
+            
+            if video_id and titulo:
+                # Usamos yt-dlp solo para extraer el link de audio directo del video seleccionado
+                ydl_opts = {
+                    'format': 'bestaudio/best',
+                    'noplaylist': True,
+                    'extractor_args': {'youtube': {'player_client': ['android', 'web']}}
+                }
+                
+                def _get_stream():
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
+                        return info.get('url')
 
-        for entry in info.get('entries', []):
-            if entry and entry.get('url'):
-                titulo_original = entry.get('title', '')
-                titulo_normalizado = "".join(c.lower() for c in titulo_original if c.isalnum())
+                try:
+                    stream_url = await loop.run_in_executor(None, _get_stream)
+                except Exception:
+                    stream_url = f"https://www.youtube.com/watch?v={video_id}"
 
-                if titulo_normalizado not in titulos_vistos:
-                    titulos_vistos.add(titulo_normalizado)
-                    video_id = entry.get('id')
-                    thumbnail_url = entry.get('thumbnail') or f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+                resultados.append({
+                    'id': video_id,
+                    'titulo': titulo,
+                    'canal': canal,
+                    'stream_url': stream_url,
+                    'miniatura': f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+                })
 
-                    resultados.append({
-                        'id': video_id,
-                        'titulo': titulo_original,
-                        'canal': entry.get('uploader'),
-                        'stream_url': entry.get('url'),
-                        'miniatura': thumbnail_url
-                    })
-
-        return JSONResponse({"status": "ok", "resultados": resultados[:20]})
+        return JSONResponse({"status": "ok", "resultados": resultados})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 
@@ -260,7 +287,7 @@ async def descargar_audio(request):
             'preferredcodec': 'mp3',
             'preferredquality': '192',
         }],
-        'extractor_args': {'youtube': {'player_client': ['android']}},
+        'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
     }
 
     loop = asyncio.get_event_loop()
