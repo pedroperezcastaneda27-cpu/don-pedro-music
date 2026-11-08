@@ -22,9 +22,9 @@ HTML_TEMPLATE = """
 <body style="background: #121212; color: #ffffff; font-family: Arial; padding: 15px; max-width: 600px; margin: 0 auto;">
     <h2 style="color: #1db954; text-align: center; margin-bottom: 5px;">🎵 Don Pedro Music 🎵</h2>
     <p style="text-align: center; color: #888; font-size: 12px; margin-top: 0;">Reproductor, Bajos Pesados y Descargas</p>
-    
+
     <!-- ANUNCIO SUPERIOR -->
-    <div style="background: #1e1e1e; border: 1px dashed #444; padding: 10px; text-align: center; margin-bottom: 15px; border-radius: 8px; color: #666; font-size: 11px;">
+    <div style="background: #1e1e1e; border: 1px dashed #444; padding: 10px; text-align: center; margin-bottom: 15px; border-radius: 8px; color: #666;">
         [ Espacio para tu Anuncio / Banner Superior ]
     </div>
 
@@ -43,18 +43,18 @@ HTML_TEMPLATE = """
     <div style="background: #1a1a1a; padding: 12px; border-radius: 8px; border: 1px solid #333; margin-bottom: 15px; text-align: center;">
         <p style="margin: 0 0 8px 0; font-size: 13px; color: #ffeb3b; font-weight: bold;">🎛️ Ecualizador de Bajos (Modo Taller)</p>
         <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
-            <button onclick="setBass(0)" style="background: #333; color: #fff; border: 1px solid #555; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">Normal</button>
-            <button onclick="setBass(10)" style="background: #b22222; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;">🔥 Mega Bajo</button>
-            <button onclick="setBass(20)" style="background: #ff4500; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;">⚡ Bajo a Tope</button>
+            <button onclick="setBass(0)" style="background: #333; color: #fff; border: 1px solid #555; padding: 6px 12px; border-radius: 6px; cursor: pointer;">Normal</button>
+            <button onclick="setBass(10)" style="background: #b22222; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;">🔥 Mega Bajo</button>
+            <button onclick="setBass(20)" style="background: #ff4500; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;">⚡ Bajo a Tope</button>
         </div>
     </div>
-    
+
     <div id="status" style="text-align: center; color: #ffeb3b; font-weight: bold; margin-bottom: 15px; font-size: 14px;"></div>
     <div id="loading" style="text-align: center; color: #1db954; display: none; margin: 20px; font-weight: bold;">⚡ Buscando repertorio con carátulas...</div>
     <div id="results"></div>
 
     <!-- ANUNCIO INFERIOR -->
-    <div style="background: #1e1e1e; border: 1px dashed #444; padding: 10px; text-align: center; margin-top: 20px; border-radius: 8px; color: #666; font-size: 11px;">
+    <div style="background: #1e1e1e; border: 1px dashed #444; padding: 10px; text-align: center; margin-top: 20px; border-radius: 8px; color: #666; font-size: 12px;">
         [ Espacio para tu Anuncio / Banner Inferior ]
     </div>
 
@@ -125,20 +125,20 @@ HTML_TEMPLATE = """
                 let res = await fetch('/buscar?q=' + encodeURIComponent(q));
                 let data = await res.json();
                 document.getElementById('loading').style.display = 'none';
-                
+
                 if (data.resultados && data.resultados.length > 0) {
                     let html = '';
                     data.resultados.forEach(item => {
                         let tituloLimpio = item.titulo.replace(/'/g, "").replace(/"/g, "");
                         html += `
-                            <div style="background: #1e1e1e; padding: 10px; margin-bottom: 12px; border-radius: 8px; border: 1px solid #333; display: flex; gap: 12px; align-items: center;">
-                                <img src="${item.miniatura}" style="width: 75px; height: 55px; object-fit: cover; border-radius: 6px; background: #222;" />
+                            <div style="background: #1e1e1e; padding: 10px; margin-bottom: 12px; border-radius: 8px; border: 1px solid #333; display: flex; gap: 10px; align-items: center;">
+                                <img src="${item.miniatura}" style="width: 75px; height: 55px; object-fit: cover; border-radius: 6px; background: #222;">
                                 <div style="flex: 1; overflow: hidden;">
                                     <h4 style="margin: 0 0 4px 0; font-size: 13px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.titulo}</h4>
                                     <p style="margin: 0 0 6px 0; font-size: 11px; color: #aaa;">${item.canal}</p>
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         <audio controls onplay="initAudioContext(this)" style="flex: 1; height: 32px;" src="${item.stream_url}"></audio>
-                                        <button onclick="descargar('${item.id}', '${tituloLimpio}', this)" style="background: #282828; color: #1db954; border: 1px solid #1db954; padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: bold;" title="Descargar MP3">📥 SD</button>
+                                        <button onclick="descargar('${item.id}', '${tituloLimpio}', this)" style="background: #282828; color: #1db954; border: 1px solid #1db954; padding: 6px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px;">📥 SD</button>
                                     </div>
                                 </div>
                             </div>
@@ -158,7 +158,7 @@ HTML_TEMPLATE = """
             btn.innerText = "⏳...";
             btn.disabled = true;
             document.getElementById('status').innerText = `⏳ Generando MP3 de "${titulo}"...`;
-            
+
             try {
                 let res = await fetch('/descargar_mp3/' + id);
                 let data = await res.json();
@@ -206,15 +206,17 @@ async def buscar_canciones(request):
     q = request.query_params.get("q", "")
     if not q:
         return JSONResponse({"error": "Vacío"}, status_code=400)
-    
+
     ydl_opts = {
         'format': 'bestaudio/best',
         'noplaylist': True,
         'default_search': 'ytsearch30',
-        'socket_timeout': 5,
+        'socket_timeout': 10,
+        'extractor_args': {'youtube': {'player_client': ['android']}},
+        'user_agent': 'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
         'match_filter': yt_dlp.utils.match_filter_func("duration < 720"),
     }
-    
+
     loop = asyncio.get_event_loop()
     def _buscar():
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -224,17 +226,17 @@ async def buscar_canciones(request):
         info = await loop.run_in_executor(None, _buscar)
         resultados = []
         titulos_vistos = set()
-        
+
         for entry in info.get('entries', []):
             if entry and entry.get('url'):
                 titulo_original = entry.get('title', '')
                 titulo_normalizado = "".join(c.lower() for c in titulo_original if c.isalnum())
-                
+
                 if titulo_normalizado not in titulos_vistos:
                     titulos_vistos.add(titulo_normalizado)
                     video_id = entry.get('id')
                     thumbnail_url = entry.get('thumbnail') or f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
-                    
+
                     resultados.append({
                         'id': video_id,
                         'titulo': titulo_original,
@@ -242,7 +244,7 @@ async def buscar_canciones(request):
                         'stream_url': entry.get('url'),
                         'miniatura': thumbnail_url
                     })
-        
+
         return JSONResponse({"status": "ok", "resultados": resultados[:25]})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
@@ -250,7 +252,7 @@ async def buscar_canciones(request):
 async def descargar_audio(request):
     video_id = request.path_params['video_id']
     url = f"https://www.youtube.com/watch?v={video_id}"
-    
+
     ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s.%(ext)s'),
@@ -259,21 +261,23 @@ async def descargar_audio(request):
             'preferredcodec': 'mp3',
             'preferredquality': '192',
         }],
+        'extractor_args': {'youtube': {'player_client': ['android']}},
+        'user_agent': 'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
         'match_filter': yt_dlp.utils.match_filter_func("duration < 720"),
     }
-    
+
     loop = asyncio.get_event_loop()
     def _descargar():
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
+            ydl.extract_info(url, download=True)
             return os.path.join(DOWNLOAD_DIR, f"{video_id}.mp3")
 
     try:
         mp3_file = await loop.run_in_executor(None, _descargar)
-        
+
         if os.path.exists(mp3_file):
             return JSONResponse({
-                "status": "success", 
+                "status": "success",
                 "download_url": f"/archivo/{video_id}.mp3"
             })
         else:
