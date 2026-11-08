@@ -1,7 +1,5 @@
 import os
 import asyncio
-import urllib.request
-import json
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse, HTMLResponse
 from starlette.routing import Route, Mount
@@ -209,48 +207,44 @@ async def buscar_canciones(request):
     if not q:
         return JSONResponse({"error": "Vacío"}, status_code=400)
 
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'noplaylist': True,
+        'default_search': 'ytsearch20',
+        'socket_timeout': 20,
+        'extractor_args': {'youtube': {'player_client': ['android']}},
+        'match_filter': yt_dlp.utils.match_filter_func("duration < 720"),
+    }
+
+    loop = asyncio.get_event_loop()
+    def _buscar():
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            return ydl.extract_info(f"ytsearch20:{q}", download=False)
+
     try:
-        # Usamos API pública de respaldo (Invidious instance) para buscar sin bloqueo de bot
-        url = f"https://vid.priv.au/api/v1/search?q={urllib.parse.quote(q)}&type=video"
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        
-        def _fetch():
-            with urllib.request.urlopen(req, timeout=10) as response:
-                return json.loads(response.read().decode())
-
-        loop = asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, _fetch)
-        
+        info = await loop.run_in_executor(None, _buscar)
         resultados = []
-        for item in data[:20]:
-            video_id = item.get('videoId')
-            titulo = item.get('title')
-            canal = item.get('author')
-            
-            # Obtenemos URL de stream directa usando yt-dlp solo para el video específico
-            ydl_opts = {
-                'format': 'bestaudio/best',
-                'noplaylist': True,
-                'extractor_args': {'youtube': {'player_client': ['android']}}
-            }
-            
-            def _get_stream():
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
-                    return info.get('url')
+        titulos_vistos = set()
 
-            stream_url = await loop.run_in_executor(None, _get_stream)
+        for entry in info.get('entries', []):
+            if entry and entry.get('url'):
+                titulo_original = entry.get('title', '')
+                titulo_normalizado = "".join(c.lower() for c in titulo_original if c.isalnum())
 
-            if video_id and stream_url:
-                resultados.append({
-                    'id': video_id,
-                    'titulo': titulo,
-                    'canal': canal,
-                    'stream_url': stream_url,
-                    'miniatura': f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
-                })
+                if titulo_normalizado not in titulos_vistos:
+                    titulos_vistos.add(titulo_normalizado)
+                    video_id = entry.get('id')
+                    thumbnail_url = entry.get('thumbnail') or f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
 
-        return JSONResponse({"status": "ok", "resultados": resultados})
+                    resultados.append({
+                        'id': video_id,
+                        'titulo': titulo_original,
+                        'canal': entry.get('uploader'),
+                        'stream_url': entry.get('url'),
+                        'miniatura': thumbnail_url
+                    })
+
+        return JSONResponse({"status": "ok", "resultados": resultados[:20]})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 
