@@ -1,205 +1,537 @@
 import os
-import asyncio
 from starlette.applications import Starlette
-from starlette.responses import JSONResponse, HTMLResponse
-from starlette.routing import Route, Mount
-from starlette.staticfiles import StaticFiles
+from starlette.responses import HTMLResponse, JSONResponse
+from starlette.routing import Route
 
-DOWNLOAD_DIR = "downloads"
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-
-HTML_TEMPLATE = """
+HTML = r"""
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Don Pedro Taller & Media</title>
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#1db954">
-    <style>
-        body { background: #121212; color: #ffffff; font-family: Arial, sans-serif; padding: 15px; max-width: 600px; margin: 0 auto; padding-bottom: 80px; }
-        .tab-container { display: flex; gap: 6px; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; overflow-x: auto; }
-        .tab-btn { flex: 1; padding: 10px 5px; background: #222; color: #aaa; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-align: center; white-space: nowrap; font-size: 13px; }
-        .tab-btn.active { background: #1db954; color: #fff; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        input[type="text"] { width: 100%; padding: 14px; background: #222; color: #fff; border: 1px solid #444; border-radius: 8px; font-size: 16px; outline: none; box-sizing: border-box; margin-bottom: 10px; }
-        button.main-btn { width: 100%; padding: 14px; background: #1db954; color: #fff; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
-        .card { background: #1e1e1e; padding: 12px; margin-bottom: 12px; border-radius: 8px; border: 1px solid #333; display: flex; gap: 10px; align-items: center; }
-        .card img { width: 75px; height: 55px; object-fit: cover; border-radius: 6px; background: #222; }
-        .card-info { flex: 1; overflow: hidden; }
-        .card-info h4 { margin: 0 0 4px 0; font-size: 13px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .card-info p { margin: 0 0 6px 0; font-size: 11px; color: #aaa; }
-        .play-btn { background: #282828; color: #1db954; border: 1px solid #1db954; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .video-card { background: #1e1e1e; border: 1px solid #333; border-radius: 8px; margin-bottom: 15px; overflow: hidden; padding: 10px; }
-        .video-container { position: relative; width: 100%; padding-bottom: 56.25%; height: 0; background: #000; border-radius: 6px; overflow: hidden; }
-        .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
-        #status { text-align: center; color: #ffeb3b; font-weight: bold; margin-bottom: 15px; font-size: 14px; }
-        #loading { text-align: center; color: #1db954; display: none; margin: 20px; font-weight: bold; }
-        .ad-box { background: #181818; border: 1px solid #333; padding: 10px; text-align: center; margin: 15px 0; border-radius: 8px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#121212">
+<meta name="description" content="Plataforma de capacitación automotriz, tutoriales y diagnóstico de vehículos.">
+<title>Don Pedro Taller & Media</title>
+<link rel="manifest" href="/manifest.json">
+
+<style>
+* {box-sizing:border-box}
+body {
+ background:#121212;
+ color:white;
+ font-family:Arial,sans-serif;
+ margin:0;
+ padding:15px;
+ max-width:850px;
+ margin:auto;
+ padding-bottom:40px;
+}
+header {text-align:center;padding:15px 0}
+header h1 {color:#1db954;font-size:25px;margin:5px}
+header p {color:#999;font-size:12px}
+
+.tabs {
+ display:flex;
+ gap:7px;
+ overflow-x:auto;
+ margin:15px 0;
+}
+.tab {
+ flex:1;
+ min-width:100px;
+ border:0;
+ padding:13px 8px;
+ border-radius:8px;
+ background:#292929;
+ color:white;
+ font-weight:bold;
+ cursor:pointer;
+}
+.tab.active {background:#1db954;color:#fff}
+
+.page {display:none}
+.page.active {display:block}
+
+h2 {color:#1db954;font-size:19px}
+h3 {font-size:15px}
+
+.ad-slot {
+ background:#191919;
+ border:1px dashed #444;
+ border-radius:8px;
+ padding:12px;
+ margin:18px 0;
+ text-align:center;
+ min-height:70px;
+}
+.ad-label {
+ color:#777;
+ font-size:10px;
+ margin-bottom:8px;
+}
+
+.search {
+ width:100%;
+ padding:13px;
+ background:#222;
+ border:1px solid #444;
+ border-radius:8px;
+ color:white;
+ font-size:15px;
+ margin:10px 0;
+}
+.categories {
+ display:flex;
+ gap:7px;
+ flex-wrap:wrap;
+ margin:12px 0;
+}
+.categories button {
+ background:#292929;
+ border:1px solid #444;
+ color:white;
+ border-radius:20px;
+ padding:9px 12px;
+ cursor:pointer;
+}
+.categories button.selected {
+ background:#1db954;
+ border-color:#1db954;
+}
+
+.course {
+ background:#1e1e1e;
+ border:1px solid #333;
+ border-radius:10px;
+ padding:15px;
+ margin-bottom:12px;
+}
+.course h3 {margin:0 0 8px;color:#fff}
+.course p {color:#aaa;font-size:13px;line-height:1.5}
+.course a {
+ display:inline-block;
+ background:#1db954;
+ color:white;
+ padding:10px 14px;
+ text-decoration:none;
+ border-radius:7px;
+ font-weight:bold;
+ font-size:13px;
+}
+.creator {
+ background:#1e1e1e;
+ border:1px solid #333;
+ border-radius:10px;
+ padding:12px;
+ margin-bottom:20px;
+ overflow:hidden;
+}
+.creator h3 {color:#1db954}
+.tiktok-embed {
+ margin:0 auto !important;
+ max-width:605px !important;
+ min-width:280px !important;
+}
+.info {
+ background:#202820;
+ border-left:3px solid #1db954;
+ padding:12px;
+ border-radius:5px;
+ font-size:13px;
+ line-height:1.5;
+ margin:15px 0;
+}
+footer {
+ border-top:1px solid #333;
+ margin-top:25px;
+ padding-top:15px;
+ text-align:center;
+ color:#888;
+ font-size:12px;
+}
+footer a {color:#1db954}
+button {font-family:inherit}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>🔧 DON PEDRO TALLER & MEDIA</h1>
+<p>CAPACITACIÓN AUTOMOTRIZ • DIAGNÓSTICO • REPARACIONES</p>
+</header>
+
+<nav class="tabs">
+<button class="tab active" data-page="cursos">📚 Cursos</button>
+<button class="tab" data-page="videos">🎬 TikTok</button>
+<button class="tab" data-page="taller">🛠️ Taller</button>
+</nav>
+
+<!-- ZONA PUBLICITARIA PRINCIPAL -->
+<div class="ad-slot">
+<div class="ad-label">PUBLICIDAD</div>
+
+<!-- Código de zona existente. Conservar sin modificar. -->
+<script async src="https://pl31305642.profitableratecpmnetwork.com/31213080/invoke.js"></script>
+<div id="container-5fb16da782b926221a41d2e6f11d9f41"></div>
+</div>
+
+<!-- ================= CURSOS ================= -->
+
+<section class="page active" id="cursos">
+
+<h2>📚 Biblioteca de capacitación</h2>
+
+<p style="color:#aaa;font-size:13px">
+Selecciona una especialidad para encontrar tutoriales y
+clases de mecánica automotriz.
+</p>
+
+<input class="search" id="courseSearch"
+placeholder="Buscar especialidad...">
+
+<div class="categories">
+<button class="selected" data-filter="all">Todos</button>
+<button data-filter="motor">Motor</button>
+<button data-filter="electricidad">Electricidad</button>
+<button data-filter="diagnostico">Diagnóstico</button>
+<button data-filter="frenos">Frenos</button>
+<button data-filter="transmision">Transmisión</button>
+<button data-filter="inyeccion">Inyección</button>
+</div>
+
+<div id="courseList">
+
+<div class="course" data-category="motor">
+<h3>🔩 Motores de gasolina</h3>
+<p>Funcionamiento, compresión, distribución, culata,
+sobrecalentamiento y reparación de motores.</p>
+<a target="_blank" rel="noopener"
+href="https://www.tiktok.com/search?q=mecanica%20reparacion%20motores">
+Buscar clases
+</a>
+</div>
+
+<div class="course" data-category="electricidad">
+<h3>⚡ Electricidad automotriz</h3>
+<p>Circuitos, relevadores, fusibles, alternadores,
+marcha, tierras y diagramas eléctricos.</p>
+<a target="_blank" rel="noopener"
+href="https://www.tiktok.com/search?q=electricidad%20automotriz%20curso">
+Buscar clases
+</a>
+</div>
+
+<div class="course" data-category="diagnostico">
+<h3>🔍 Diagnóstico con escáner OBD2</h3>
+<p>Códigos DTC, datos en vivo, sensores, actuadores,
+diagnóstico electrónico y pruebas.</p>
+<a target="_blank" rel="noopener"
+href="https://www.tiktok.com/search?q=diagnostico%20automotriz%20OBD2">
+Buscar clases
+</a>
+</div>
+
+<div class="course" data-category="frenos">
+<h3>🛞 Frenos y suspensión</h3>
+<p>Discos, pastillas, ABS, amortiguadores,
+terminales, bujes y dirección.</p>
+<a target="_blank" rel="noopener"
+href="https://www.tiktok.com/search?q=reparacion%20frenos%20suspension">
+Buscar clases
+</a>
+</div>
+
+<div class="course" data-category="transmision">
+<h3>⚙️ Transmisiones automáticas</h3>
+<p>Convertidor de par, solenoides, cuerpo de válvulas,
+sensores y diagnóstico de transmisiones.</p>
+<a target="_blank" rel="noopener"
+href="https://www.tiktok.com/search?q=curso%20transmisiones%20automaticas">
+Buscar clases
+</a>
+</div>
+
+<div class="course" data-category="inyeccion">
+<h3>💉 Inyección electrónica</h3>
+<p>Inyectores, presión de combustible, sensores MAP,
+MAF, TPS, CKP y sistema de alimentación.</p>
+<a target="_blank" rel="noopener"
+href="https://www.tiktok.com/search?q=inyeccion%20electronica%20automotriz">
+Buscar clases
+</a>
+</div>
+
+</div>
+
+<div class="ad-slot">
+<div class="ad-label">PUBLICIDAD</div>
+<!-- Segundo espacio: colocar aquí un código de zona
+     independiente generado por Adsterra. -->
+</div>
+
+</section>
+
+<!-- ================= TIKTOK ================= -->
+
+<section class="page" id="videos">
+
+<h2>🎬 Videos de mecánica automotriz</h2>
+
+<p style="color:#aaa;font-size:13px">
+Aprende de creadores especializados en diagnóstico,
+reparaciones y mantenimiento.
+</p>
+
+<div class="creator">
+<h3>🔬 SD Automotriz</h3>
+<p style="color:#aaa;font-size:12px">
+Diagnóstico electrónico, sensores y sistemas automotrices.
+</p>
+
+<blockquote class="tiktok-embed"
+cite="https://www.tiktok.com/@sdautomotriz"
+data-unique-id="sdautomotriz"
+data-embed-type="creator"
+style="max-width:780px;min-width:288px">
+<section>
+<a target="_blank"
+href="https://www.tiktok.com/@sdautomotriz">
+@sdautomotriz
+</a>
+</section>
+</blockquote>
+</div>
+
+<div class="creator">
+<h3>🔧 Motortips</h3>
+<p style="color:#aaa;font-size:12px">
+Consejos, mantenimiento y mecánica práctica.
+</p>
+
+<blockquote class="tiktok-embed"
+cite="https://www.tiktok.com/@motortips_"
+data-unique-id="motortips_"
+data-embed-type="creator"
+style="max-width:780px;min-width:288px">
+<section>
+<a target="_blank"
+href="https://www.tiktok.com/@motortips_">
+@motortips_
+</a>
+</section>
+</blockquote>
+</div>
+
+<div class="creator">
+<h3>🚘 Chacarmona</h3>
+<p style="color:#aaa;font-size:12px">
+Experiencias de taller, mantenimiento y reparaciones.
+</p>
+
+<blockquote class="tiktok-embed"
+cite="https://www.tiktok.com/@chacarmona"
+data-unique-id="chacarmona"
+data-embed-type="creator"
+style="max-width:780px;min-width:288px">
+<section>
+<a target="_blank"
+href="https://www.tiktok.com/@chacarmona">
+@chacarmona
+</a>
+</section>
+</blockquote>
+</div>
+
+<div class="ad-slot">
+<div class="ad-label">PUBLICIDAD</div>
+<!-- Tercer espacio: código independiente de Adsterra. -->
+</div>
+
+</section>
+
+<!-- ================= TALLER ================= -->
+
+<section class="page" id="taller">
+
+<h2>🛠️ Taller y diagnóstico</h2>
+
+<div class="course">
+<h3>🔧 Diagnóstico de fallas</h3>
+<p>Aprende a encontrar fallas sin cambiar piezas
+innecesariamente.</p>
+<a target="_blank" rel="noopener"
+href="https://www.tiktok.com/search?q=diagnostico%20fallas%20automotrices">
+Ver tutoriales
+</a>
+</div>
+
+<div class="course">
+<h3>⚡ Pruebas eléctricas</h3>
+<p>Uso de multímetro, continuidad, voltaje,
+caídas de tensión y pruebas de componentes.</p>
+<a target="_blank" rel="noopener"
+href="https://www.tiktok.com/search?q=pruebas%20electricas%20automotrices">
+Ver tutoriales
+</a>
+</div>
+
+<div class="course">
+<h3>🔬 Sensores y actuadores</h3>
+<p>Cómo probar sensores, interpretar señales
+y comprobar actuadores.</p>
+<a target="_blank" rel="noopener"
+href="https://www.tiktok.com/search?q=sensores%20actuadores%20automotrices">
+Ver tutoriales
+</a>
+</div>
+
+<div class="course">
+<h3>🚗 Mantenimiento preventivo</h3>
+<p>Aceite, filtros, refrigeración, correas
+y revisiones periódicas.</p>
+<a target="_blank" rel="noopener"
+href="https://www.tiktok.com/search?q=mantenimiento%20automotriz">
+Ver tutoriales
+</a>
+</div>
+
+<div class="info">
+<strong>Aprendizaje responsable:</strong>
+Los procedimientos de reparación deben verificarse
+con manuales técnicos y especificaciones del fabricante.
+Utiliza las medidas de seguridad apropiadas.
+</div>
+
+<div class="ad-slot">
+<div class="ad-label">PUBLICIDAD</div>
+<!-- Cuarto espacio: código independiente de Adsterra. -->
+</div>
+
+</section>
+
+<footer>
+<p>© 2026 Don Pedro Taller & Media</p>
+<p>Plataforma independiente de capacitación automotriz.</p>
+<a href="/privacidad">Política de privacidad</a>
+</footer>
+
+<!-- Cargar TikTok una sola vez -->
+<script async src="https://www.tiktok.com/embed.js"></script>
+
+<!-- Popunder original: cargar una sola vez.
+     El comportamiento lo controla el proveedor. -->
+<script src="https://pl31305642.profitableratecpmnetwork.com/f2/0e/67/f20e6758589f93239924993b647b2b21.js"></script>
+
+<script>
+const tabs = document.querySelectorAll('.tab');
+
+tabs.forEach(tab => {
+ tab.addEventListener('click', () => {
+  tabs.forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p =>
+   p.classList.remove('active')
+  );
+
+  tab.classList.add('active');
+  document.getElementById(tab.dataset.page)
+   .classList.add('active');
+ });
+});
+
+// Filtro de especialidades
+let selectedCategory = 'all';
+
+function filterCourses() {
+ const q = document.getElementById('courseSearch')
+  .value.toLowerCase();
+
+ document.querySelectorAll('#courseList .course')
+  .forEach(card => {
+   const category = card.dataset.category;
+   const matchesCategory =
+    selectedCategory === 'all' ||
+    selectedCategory === category;
+
+   const matchesText =
+    card.innerText.toLowerCase().includes(q);
+
+   card.style.display =
+    matchesCategory && matchesText ? 'block' : 'none';
+  });
+}
+
+document.getElementById('courseSearch')
+ .addEventListener('input', filterCourses);
+
+document.querySelectorAll('.categories button')
+ .forEach(button => {
+  button.addEventListener('click', () => {
+   document.querySelectorAll('.categories button')
+    .forEach(b => b.classList.remove('selected'));
+
+   button.classList.add('selected');
+   selectedCategory = button.dataset.filter;
+   filterCourses();
+  });
+});
+
+// PWA
+if ('serviceWorker' in navigator) {
+ navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+</script>
+
+</body>
+</html>
+"""
+
+PRIVACY = """
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacidad - Don Pedro Taller & Media</title>
+<style>
+body{background:#121212;color:white;font-family:Arial;
+padding:25px;max-width:700px;margin:auto;line-height:1.6}
+h1{color:#1db954}
+a{color:#1db954}
+</style>
 </head>
 <body>
-    <h2 style="color: #1db954; text-align: center; margin-bottom: 2px;">🔧 Don Pedro Taller & Media 🔧</h2>
-    <p style="text-align: center; color: #888; font-size: 12px; margin-top: 0; margin-bottom: 15px;">Plataforma de Capacitación y Streaming</p>
-
-    <!-- PESTAÑAS -->
-    <div class="tab-container">
-        <button class="tab-btn active" onclick="switchTab(1)">🔍 Buscador</button>
-        <button class="tab-btn" onclick="switchTab(2)">🎧 Reproductor</button>
-        <button class="tab-btn" onclick="switchTab(3)">🛠️ Curso de Mecánica</button>
-    </div>
-
-    <div id="status"></div>
-
-    <!-- PESTAÑA 1: BUSCADOR -->
-    <div id="tab1" class="tab-content active">
-        <div>
-            <input type="text" id="query" placeholder="Escribe artista o canción..." onkeydown="if(event.key === 'Enter') buscarClient()">
-            <button class="main-btn" onclick="buscarClient()">Buscar Rolas</button>
-        </div>
-
-        <div class="ad-box">
-            <script async src="https://pl31305642.profitableratecpmnetwork.com/31213080/invoke.js"></script>
-            <div id="container-5fb16da782b926221a41d2e6f11d9f41"></div>
-        </div>
-
-        <div id="loading">⚡ Buscando canciones...</div>
-        <div id="results" style="margin-top: 15px;"></div>
-    </div>
-
-    <!-- PESTAÑA 2: REPRODUCTOR -->
-    <div id="tab2" class="tab-content">
-        <h3 style="color: #1db954; font-size: 15px; margin-bottom: 10px;">🎧 Reproductor en Vivo:</h3>
-        <div id="player-container" style="background: #1e1e1e; padding: 15px; border-radius: 8px; text-align: center;">
-            <p id="now-playing" style="color: #aaa; font-size: 14px;">Selecciona una rola del buscador para escucharla.</p>
-            <audio id="audio-stream" controls style="width:100%; margin-top:10px; display:none;" onplay="triggerPopunder()"></audio>
-        </div>
-
-        <div class="ad-box" style="margin-top: 20px;">
-            <script async src="https://pl31305642.profitableratecpmnetwork.com/31213080/invoke.js"></script>
-        </div>
-    </div>
-
-    <!-- PESTAÑA 3: CURSO DE MECÁNICA -->
-    <div id="tab3" class="tab-content">
-        <h3 style="color: #1db954; font-size: 15px; margin-bottom: 15px;">🛠️ Módulos de Mecánica y Motores:</h3>
-        
-        <div class="video-card">
-            <h4 style="color:#fff; font-size:14px; margin-bottom:8px;">1. Funcionamiento del Motor de Combustión Interna</h4>
-            <div class="video-container" onclick="triggerPopunder()">
-                <iframe src="https://www.youtube.com/embed/8-q9k2x1i4U" allowfullscreen></iframe>
-            </div>
-        </div>
-
-        <div class="video-card">
-            <h4 style="color:#fff; font-size:14px; margin-bottom:8px;">2. Diagnóstico y Reparación General de Motores</h4>
-            <div class="video-container" onclick="triggerPopunder()">
-                <iframe src="https://www.youtube.com/embed/Jn099_gZuFA" allowfullscreen></iframe>
-            </div>
-        </div>
-
-        <div class="ad-box">
-            <script async src="https://pl31305642.profitableratecpmnetwork.com/31213080/invoke.js"></script>
-        </div>
-    </div>
-
-    <!-- ANUNCIOS -->
-    <script src="https://pl31305642.profitableratecpmnetwork.com/f2/0e/67/f20e6758589f93239924993b647b2b21.js"></script>
-    <script data-cfasync="false" src="https://bellnewyork.org/14/e24c54a7abfb06cd69608a2609703f4b"></script>
-
-    <script>
-        function switchTab(n) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelectorAll('.tab-btn')[n-1].classList.add('active');
-            document.getElementById('tab' + n).classList.add('active');
-            triggerPopunder();
-        }
-
-        function triggerPopunder() {
-            try {
-                let ev = new MouseEvent('click', {view: window, bubbles: true, cancelable: true});
-                document.body.dispatchEvent(ev);
-            } catch(e) {}
-        }
-
-        async function buscarClient() {
-            triggerPopunder();
-            const q = document.getElementById('query').value;
-            if (!q) return;
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('results').innerHTML = '';
-            document.getElementById('status').innerText = '';
-
-            try {
-                let response = await fetch(`/api/buscar?q=` + encodeURIComponent(q));
-                let data = await response.json();
-                document.getElementById('loading').style.display = 'none';
-
-                if (data && data.length > 0) {
-                    let html = '';
-                    data.forEach(item => {
-                        let videoId = item.id;
-                        let titulo = item.title.replace(/'/g, "").replace(/"/g, "");
-                        let canal = item.uploader || "YouTube";
-                        let miniatura = item.thumbnail || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
-
-                        html += `
-                            <div class="card">
-                                <img src="${miniatura}">
-                                <div class="card-info">
-                                    <h4>${titulo}</h4>
-                                    <p>${canal}</p>
-                                    <button class="play-btn" onclick="reproducirDirecto('${videoId}', '${titulo}')">▶ Escuchar</button>
-                                </div>
-                            </div>
-                        `;
-                    });
-                    document.getElementById('results').innerHTML = html;
-                } else {
-                    document.getElementById('status').innerText = 'No se encontraron rolas.';
-                }
-            } catch (e) {
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('status').innerText = 'Error al conectar con el servidor.';
-            }
-        }
-
-        async function reproducirDirecto(id, titulo) {
-            triggerPopunder();
-            document.getElementById('status').innerText = `⚡ Cargando enlace para: ${titulo}`;
-
-            try {
-                let res = await fetch('/api/stream/' + id);
-                let data = await res.json();
-                if (data.url) {
-                    let audio = document.getElementById('audio-stream');
-                    audio.src = data.url;
-                    audio.style.display = 'block';
-                    document.getElementById('now-playing').innerText = "🎵 Reproduciendo: " + titulo;
-                    audio.play();
-                    document.getElementById('status').innerText = "¡Reproducción en curso!";
-                    setTimeout(() => switchTab(2), 500);
-                } else {
-                    document.getElementById('status').innerText = data.error || "Error al obtener el flujo de audio.";
-                }
-            } catch (e) {
-                document.getElementById('status').innerText = 'Error de conexión al reproducir.';
-            }
-        }
-    </script>
+<h1>Política de privacidad</h1>
+<p>Don Pedro Taller & Media es una plataforma informativa
+de capacitación automotriz.</p>
+<h2>Servicios externos</h2>
+<p>Esta página utiliza contenido incrustado de TikTok
+y servicios publicitarios de terceros.</p>
+<p>Estos proveedores pueden utilizar cookies,
+identificadores y tecnologías similares conforme a sus
+propias políticas de privacidad.</p>
+<h2>Publicidad</h2>
+<p>Los anuncios pueden ser proporcionados por Adsterra.
+La recopilación y el tratamiento de datos dependen
+de las políticas del proveedor.</p>
+<h2>Contenido</h2>
+<p>Los videos pertenecen a sus respectivos creadores.
+Don Pedro Taller & Media no reclama su propiedad.</p>
+<p>Contacto: agrega aquí tu correo de contacto.</p>
+<a href="/">Volver a inicio</a>
 </body>
 </html>
 """
 
 async def home(request):
-    return HTMLResponse(HTML_TEMPLATE)
+    return HTMLResponse(HTML)
+
+async def privacy(request):
+    return HTMLResponse(PRIVACY)
 
 async def manifest(request):
     return JSONResponse({
-        "name": "Don Pedro Music",
+        "name": "Don Pedro Taller & Media",
         "short_name": "DonPedro",
         "start_url": "/",
         "display": "standalone",
@@ -207,61 +539,21 @@ async def manifest(request):
         "theme_color": "#1db954"
     })
 
-async def api_buscar(request):
-    query = request.query_params.get('q', '')
-    if not query:
-        return JSONResponse([])
-
-    ydl_opts = {'extract_flat': True, 'quiet': True}
-    loop = asyncio.get_event_loop()
-    def _buscar():
-        import yt_dlp
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(f"ytsearch10:{query}", download=False)
-            return info.get('entries', [])
-
-    try:
-        entries = await loop.run_in_executor(None, _buscar)
-        resultados = []
-        for entry in entries:
-            if entry:
-                resultados.append({
-                    "id": entry.get('id'),
-                    "title": entry.get('title'),
-                    "uploader": entry.get('uploader'),
-                    "thumbnail": entry.get('thumbnail')
-                })
-        return JSONResponse(resultados)
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
-
-async def api_stream(request):
-    video_id = request.path_params['video_id']
-    url = f"https://www.youtube.com/watch?v={video_id}"
-    ydl_opts = {'format': 'bestaudio/best', 'quiet': True, 'noplaylist': True}
-    
-    loop = asyncio.get_event_loop()
-    def _obtener_url():
-        import yt_dlp
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            return info.get('url')
-
-    try:
-        stream_url = await loop.run_in_executor(None, _obtener_url)
-        if stream_url:
-            return JSONResponse({"status": "success", "url": stream_url})
-        else:
-            return JSONResponse({"error": "No se pudo extraer el enlace"}, status_code=500)
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+async def service_worker(request):
+    return HTMLResponse("""
+self.addEventListener('install', event => {
+ self.skipWaiting();
+});
+self.addEventListener('activate', event => {
+ event.waitUntil(self.clients.claim());
+});
+""", media_type="application/javascript")
 
 routes = [
     Route("/", home),
+    Route("/privacidad", privacy),
     Route("/manifest.json", manifest),
-    Route("/api/buscar", api_buscar),
-    Route("/api/stream/{video_id}", api_stream),
-    Mount("/archivo", StaticFiles(directory=DOWNLOAD_DIR), name="archivo"),
+    Route("/sw.js", service_worker),
 ]
 
 app = Starlette(routes=routes)
