@@ -21,7 +21,7 @@ HTML_TEMPLATE = """
     <style>
         body { background: #121212; color: #ffffff; font-family: Arial, sans-serif; padding: 15px; max-width: 600px; margin: 0 auto; padding-bottom: 80px; }
         .tab-container { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
-        .tab-btn { flex: 1; padding: 10px 5px; background: #222; color: #aaa; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-align: center; font-size: 13px; }
+        .tab-btn { flex: 1; padding: 10px 5px; background: #222; color: #aaa; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-align: center; }
         .tab-btn.active { background: #1db954; color: #fff; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -32,7 +32,7 @@ HTML_TEMPLATE = """
         .card-info { flex: 1; overflow: hidden; }
         .card-info h4 { margin: 0 0 4px 0; font-size: 13px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .card-info p { margin: 0 0 6px 0; font-size: 11px; color: #aaa; }
-        .download-btn { background: #282828; color: #1db954; border: 1px solid #1db954; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px; }
+        .play-btn { background: #282828; color: #1db954; border: 1px solid #1db954; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         #status { text-align: center; color: #ffeb3b; font-weight: bold; margin-bottom: 15px; font-size: 14px; }
         #loading { text-align: center; color: #1db954; display: none; margin: 20px; font-weight: bold; }
         audio { width: 100%; margin-top: 10px; border-radius: 6px; }
@@ -47,7 +47,7 @@ HTML_TEMPLATE = """
     <div class="tab-container">
         <button class="tab-btn active" onclick="switchTab(1)">🔍 Buscador</button>
         <button class="tab-btn" onclick="switchTab(2)">🎧 Reproductor</button>
-        <button class="tab-btn" onclick="switchTab(3)">📥 Descargas</button>
+        <button class="tab-btn" onclick="switchTab(3)">📥 Biblioteca</button>
     </div>
 
     <div id="status"></div>
@@ -70,28 +70,29 @@ HTML_TEMPLATE = """
 
     <!-- PESTAÑA 2: REPRODUCTOR -->
     <div id="tab2" class="tab-content">
-        <h3 style="color: #1db954; font-size: 15px; margin-bottom: 10px;">🎧 Colección & Reproductor:</h3>
-        <div id="downloaded-list">
-            <p style="color: #777; font-size: 13px; text-align: center;">Cargando lista...</p>
+        <h3 style="color: #1db954; font-size: 15px; margin-bottom: 10px;">🎧 Reproductor en Vivo:</h3>
+        <div id="player-container" style="background: #1e1e1e; padding: 15px; border-radius: 8px; text-align: center;">
+            <p id="now-playing" style="color: #aaa; font-size: 14px;">Selecciona una rola del buscador para escucharla.</p>
+            <audio id="audio-stream" controls style="display:none;" onplay="triggerPopunder()"></audio>
         </div>
 
-        <div class="ad-box">
+        <div class="ad-box" style="margin-top: 20px;">
             <script async src="https://pl31305642.profitableratecpmnetwork.com/31213080/invoke.js"></script>
         </div>
     </div>
 
-    <!-- PESTAÑA 3: CENTRO DE DESCARGAS -->
+    <!-- PESTAÑA 3: BIBLIOTECA -->
     <div id="tab3" class="tab-content">
-        <h3 style="color: #1db954; font-size: 15px; margin-bottom: 10px;">📥 Archivos listos para guardar:</h3>
+        <h3 style="color: #1db954; font-size: 15px; margin-bottom: 10px;">📥 Archivos de Respaldo:</h3>
         <div id="files-direct-list">
-            <p style="color: #777; font-size: 13px; text-align: center;">No hay archivos descargados todavía.</p>
+            <p style="color: #777; font-size: 13px; text-align: center;">Sin archivos locales necesarios.</p>
         </div>
     </div>
 
-    <!-- 2. ANUNCIO POPUNDER (EJECUCIÓN GLOBAL AUTOMÁTICA) -->
+    <!-- 2. ANUNCIO POPUNDER -->
     <script src="https://pl31305642.profitableratecpmnetwork.com/f2/0e/67/f20e6758589f93239924993b647b2b21.js"></script>
 
-    <!-- 3. ANUNCIO SOCIAL BAR (FLOTANTE QUE SIGUE AL USUARIO) -->
+    <!-- 3. ANUNCIO SOCIAL BAR -->
     <script data-cfasync="false" src="https://bellnewyork.org/14/e24c54a7abfb06cd69608a2609703f4b"></script>
 
     <script>
@@ -100,7 +101,6 @@ HTML_TEMPLATE = """
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.tab-btn')[n-1].classList.add('active');
             document.getElementById('tab' + n).classList.add('active');
-            if(n === 2 || n === 3) cargarBiblioteca();
         }
 
         function triggerPopunder() {
@@ -137,7 +137,7 @@ HTML_TEMPLATE = """
                                 <div class="card-info">
                                     <h4>${titulo}</h4>
                                     <p>${canal}</p>
-                                    <button class="download-btn" onclick="descargar('${videoId}', '${titulo}', this)">📥 Descargar MP3</button>
+                                    <button class="play-btn" onclick="reproducirDirecto('${videoId}', '${titulo}')">▶ Escuchar</button>
                                 </div>
                             </div>
                         `;
@@ -152,63 +152,27 @@ HTML_TEMPLATE = """
             }
         }
 
-        async function descargar(id, titulo, btn) {
+        async function reproducirDirecto(id, titulo) {
             triggerPopunder();
-            btn.innerText = "⏳ Bajando...";
-            btn.disabled = true;
-            document.getElementById('status').innerText = `⏳ Procesando MP3...`;
+            document.getElementById('status').innerText = `⚡ Cargando enlace para: ${titulo}`;
 
             try {
-                let res = await fetch('/descargar_mp3/' + id);
+                let res = await fetch('/api/stream/' + id);
                 let data = await res.json();
-                if (data.status === "success") {
-                    btn.innerText = "✅ ¡Listo!";
-                    document.getElementById('status').innerText = "¡Descarga completada!";
-                    setTimeout(() => switchTab(2), 1200);
+                if (data.url) {
+                    let audio = document.getElementById('audio-stream');
+                    audio.src = data.url;
+                    audio.style.display = 'block';
+                    document.getElementById('now-playing').innerText = "🎵 Reproduciendo: " + titulo;
+                    audio.play();
+                    document.getElementById('status').innerText = "¡Reproducción en curso (Impresión válida registrada)!";
+                    setTimeout(() => switchTab(2), 500);
                 } else {
-                    btn.innerText = "📥 Descargar MP3";
-                    btn.disabled = false;
-                    document.getElementById('status').innerText = data.error || "Error al descargar.";
+                    document.getElementById('status').innerText = "Error al obtener el flujo de audio.";
                 }
             } catch (e) {
-                btn.innerText = "📥 Descargar MP3";
-                btn.disabled = false;
-                document.getElementById('status').innerText = 'Error de conexión.';
+                document.getElementById('status').innerText = 'Error de conexión al reproducir.';
             }
-        }
-
-        async function cargarBiblioteca() {
-            try {
-                let res = await fetch('/api/archivos');
-                let files = await res.json();
-                let listDiv2 = document.getElementById('downloaded-list');
-                let listDiv3 = document.getElementById('files-direct-list');
-                
-                if(files && files.length > 0) {
-                    let html2 = '';
-                    let html3 = '';
-                    files.forEach(f => {
-                        html2 += `
-                            <div class="card" style="flex-direction: column; align-items: stretch;">
-                                <h4 style="margin: 0 0 6px 0; color: #1db954; font-size: 13px;">🎵 ${f}</h4>
-                                <audio controls onplay="triggerPopunder()" src="/archivo/${f}"></audio>
-                            </div>
-                        `;
-                        html3 += `
-                            <div class="card" style="justify-content: space-between;">
-                                <span style="font-size: 13px; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;">🎵 ${f}</span>
-                                <a href="/archivo/${f}" download style="background: #1db954; color: #fff; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: bold;">💾 Guardar</a>
-                            </div>
-                        `;
-                    });
-                    listDiv2.innerHTML = html2;
-                    listDiv3.innerHTML = html3;
-                } else {
-                    let emptyMsg = '<p style="color: #777; font-size: 13px; text-align: center;">No hay rolas descargadas todavía.</p>';
-                    listDiv2.innerHTML = emptyMsg;
-                    listDiv3.innerHTML = emptyMsg;
-                }
-            } catch(e) {}
         }
     </script>
 </body>
@@ -262,54 +226,38 @@ async def api_buscar(request):
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 
-async def descargar_audio(request):
+async def api_stream(request):
     video_id = request.path_params['video_id']
     url = f"https://www.youtube.com/watch?v={video_id}"
 
     ydl_opts = {
-        'format': 'bestaudio/best',
-        'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s.%(ext)s'),
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        }],
+        'format': 'bestaudio',
+        'quiet': True,
         'extractor_args': {'youtube': {'player_client': ['android']}},
     }
     if os.path.exists("cookies.txt"):
         ydl_opts['cookiefile'] = "cookies.txt"
 
     loop = asyncio.get_event_loop()
-    def _descargar():
+    def _obtener_url():
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.extract_info(url, download=True)
-            return os.path.join(DOWNLOAD_DIR, f"{video_id}.mp3")
+            info = ydl.extract_info(url, download=False)
+            return info.get('url')
 
     try:
-        mp3_file = await loop.run_in_executor(None, _descargar)
-        if os.path.exists(mp3_file):
-            return JSONResponse({
-                "status": "success",
-                "download_url": f"/archivo/{video_id}.mp3"
-            })
+        stream_url = await loop.run_in_executor(None, _obtener_url)
+        if stream_url:
+            return JSONResponse({"status": "success", "url": stream_url})
         else:
-            return JSONResponse({"error": "No se generó el MP3"}, status_code=500)
+            return JSONResponse({"error": "No se pudo extraer el enlace de audio"}, status_code=500)
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
-
-async def api_archivos(request):
-    try:
-        archivos = [f for f in os.listdir(DOWNLOAD_DIR) if f.endswith('.mp3')]
-        return JSONResponse(archivos)
-    except Exception as e:
-        return JSONResponse([], status_code=500)
 
 routes = [
     Route("/", home),
     Route("/manifest.json", manifest),
     Route("/api/buscar", api_buscar),
-    Route("/api/archivos", api_archivos),
-    Route("/descargar_mp3/{video_id}", descargar_audio),
+    Route("/api/stream/{video_id}", api_stream),
     Mount("/archivo", StaticFiles(directory=DOWNLOAD_DIR), name="archivo"),
 ]
 
