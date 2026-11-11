@@ -43,7 +43,7 @@ HTML_TEMPLATE = """
     <h2 style="color: #1db954; text-align: center; margin-bottom: 2px;">🎵 Don Pedro Music 🎵</h2>
     <p style="text-align: center; color: #888; font-size: 12px; margin-top: 0; margin-bottom: 15px;">Plataforma Oficial de Monetización</p>
 
-    <!-- 1. ESTRUCTURA DE TRES PESTAÑAS -->
+    <!-- PESTAÑAS -->
     <div class="tab-container">
         <button class="tab-btn active" onclick="switchTab(1)">🔍 Buscador</button>
         <button class="tab-btn" onclick="switchTab(2)">🎧 Reproductor</button>
@@ -89,10 +89,8 @@ HTML_TEMPLATE = """
         </div>
     </div>
 
-    <!-- 2. ANUNCIO POPUNDER -->
+    <!-- ANUNCIOS -->
     <script src="https://pl31305642.profitableratecpmnetwork.com/f2/0e/67/f20e6758589f93239924993b647b2b21.js"></script>
-
-    <!-- 3. ANUNCIO SOCIAL BAR -->
     <script data-cfasync="false" src="https://bellnewyork.org/14/e24c54a7abfb06cd69608a2609703f4b"></script>
 
     <script>
@@ -165,10 +163,10 @@ HTML_TEMPLATE = """
                     audio.style.display = 'block';
                     document.getElementById('now-playing').innerText = "🎵 Reproduciendo: " + titulo;
                     audio.play();
-                    document.getElementById('status').innerText = "¡Reproducción en curso (Impresión válida registrada)!";
+                    document.getElementById('status').innerText = "¡Reproducción en curso!";
                     setTimeout(() => switchTab(2), 500);
                 } else {
-                    document.getElementById('status').innerText = "Error al obtener el flujo de audio.";
+                    document.getElementById('status').innerText = data.error || "Error al obtener el flujo de audio.";
                 }
             } catch (e) {
                 document.getElementById('status').innerText = 'Error de conexión al reproducir.';
@@ -200,10 +198,7 @@ async def api_buscar(request):
     ydl_opts = {
         'extract_flat': True,
         'quiet': True,
-        'extractor_args': {'youtube': {'player_client': ['android']}},
     }
-    if os.path.exists("cookies.txt"):
-        ydl_opts['cookiefile'] = "cookies.txt"
 
     loop = asyncio.get_event_loop()
     def _buscar():
@@ -231,12 +226,10 @@ async def api_stream(request):
     url = f"https://www.youtube.com/watch?v={video_id}"
 
     ydl_opts = {
-        'format': 'bestaudio',
+        'format': 'bestaudio/best',
         'quiet': True,
-        'extractor_args': {'youtube': {'player_client': ['android']}},
+        'noplaylist': True,
     }
-    if os.path.exists("cookies.txt"):
-        ydl_opts['cookiefile'] = "cookies.txt"
 
     loop = asyncio.get_event_loop()
     def _obtener_url():
@@ -249,7 +242,7 @@ async def api_stream(request):
         if stream_url:
             return JSONResponse({"status": "success", "url": stream_url})
         else:
-            return JSONResponse({"error": "No se pudo extraer el enlace de audio"}, status_code=500)
+            return JSONResponse({"error": "No se pudo extraer el enlace"}, status_code=500)
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 
