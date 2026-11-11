@@ -14,7 +14,7 @@ HTML_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Don Pedro Music & Mecánica</title>
+    <title>Don Pedro Taller & Media</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#1db954">
     <style>
@@ -84,19 +84,19 @@ HTML_TEMPLATE = """
 
     <!-- PESTAÑA 3: CURSO DE MECÁNICA -->
     <div id="tab3" class="tab-content">
-        <h3 style="color: #1db954; font-size: 15px; margin-bottom: 15px;">🛠️ Módulos de Mecánica de Motores:</h3>
+        <h3 style="color: #1db954; font-size: 15px; margin-bottom: 15px;">🛠️ Módulos de Mecánica y Motores:</h3>
         
         <div class="video-card">
-            <h4 style="color:#fff; font-size:14px; margin-bottom:8px;">1. Diagnóstico y Reparación de Cabezas de Motor</h4>
+            <h4 style="color:#fff; font-size:14px; margin-bottom:8px;">1. Funcionamiento del Motor de Combustión Interna</h4>
             <div class="video-container" onclick="triggerPopunder()">
-                <iframe src="https://www.youtube.com/embed/3610A5m8Hio" allowfullscreen></iframe>
+                <iframe src="https://www.youtube.com/embed/8-q9k2x1i4U" allowfullscreen></iframe>
             </div>
         </div>
 
         <div class="video-card">
-            <h4 style="color:#fff; font-size:14px; margin-bottom:8px;">2. Calibración de Válvulas y Tiempo</h4>
+            <h4 style="color:#fff; font-size:14px; margin-bottom:8px;">2. Diagnóstico y Reparación General de Motores</h4>
             <div class="video-container" onclick="triggerPopunder()">
-                <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
+                <iframe src="https://www.youtube.com/embed/Jn099_gZuFA" allowfullscreen></iframe>
             </div>
         </div>
 
